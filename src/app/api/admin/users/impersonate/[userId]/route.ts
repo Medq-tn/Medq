@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
   try {
     // Verify admin token
@@ -22,7 +22,7 @@ export async function POST(
       return NextResponse.json({ error: 'Accès admin requis' }, { status: 403 });
     }
 
-    const { userId } = params;
+  const { userId } = await context.params;
 
     // Get user to impersonate
     const targetUser = await prisma.user.findUnique({
@@ -93,7 +93,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
   try {
     // Verify impersonation token
@@ -118,7 +118,7 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    const { userId } = params;
+  const { userId } = await context.params;
 
     // Verify the impersonation is for the correct user
     if (decoded.userId !== userId) {

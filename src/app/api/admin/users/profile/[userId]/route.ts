@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
   try {
     // Verify admin token
@@ -22,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Accès admin requis' }, { status: 403 });
     }
 
-    const { userId } = params;
+  const { userId } = await context.params;
 
     // Get comprehensive user profile data
     const user = await prisma.user.findUnique({
@@ -205,7 +205,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
   try {
     // Verify admin token
@@ -221,7 +221,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Accès admin requis' }, { status: 403 });
     }
 
-    const { userId } = params;
+  const { userId } = await context.params;
     const body = await request.json();
 
     // Validate update fields

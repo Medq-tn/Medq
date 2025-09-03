@@ -19,12 +19,22 @@ export function toast(_args?: NoopToastArgs): {
 }
 
 export function useToast(): {
-  toasts: never[]
+  toasts: Array<{
+    id: string
+    title?: React.ReactNode
+    description?: React.ReactNode
+    action?: React.ReactNode
+  } & Record<string, unknown>>
   toast: typeof toast
   dismiss: (_id?: string) => void
 } {
   return {
-    toasts: [],
+    toasts: [] as Array<{
+      id: string
+      title?: React.ReactNode
+      description?: React.ReactNode
+      action?: React.ReactNode
+    } & Record<string, unknown>>,
     toast,
     dismiss: () => {},
   }

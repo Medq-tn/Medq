@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server';
 import { requireAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 import { prisma } from '@/lib/prisma';
 
-async function getHandler(request: AuthenticatedRequest, { params }: { params: { userId: string } }) {
+async function getHandler(
+  request: AuthenticatedRequest,
+  context: { params: Promise<{ userId: string }> }
+) {
   try {
-    const { userId } = params;
+    const { userId } = await context.params;
     
     // Check if requesting user is admin
     const requestingUser = await prisma.user.findUnique({

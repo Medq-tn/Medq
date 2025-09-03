@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser, requireAdminAccess } from '@/lib/server-auth';
 
-export async function DELETE(_req: NextRequest, { params }: { params: { userId: string } }) {
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ userId: string }> }) {
   try {
     await requireAdminAccess();
     const me = await getCurrentUser();
-    const { userId } = params;
+  const { userId } = await context.params;
 
     if (!userId) {
       return NextResponse.json({ error: 'User id is required' }, { status: 400 });

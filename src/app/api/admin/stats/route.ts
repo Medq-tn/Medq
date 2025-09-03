@@ -11,10 +11,24 @@ async function getHandler() {
 
     // Fetch only user-related stats since we're focusing on admin dashboard + user management
     const [
+      specialtiesCount,
+      lecturesCount,
+      questionsCount,
+      pendingReportsCount,
       usersCount,
-      recentUsers
+      recentUsers,
+      recentQuestions,
+      recentLectures,
+      recentReports,
+      totalProgressEntries,
+      recentProgressEntries,
+      averageCompletionRate
     ] = await Promise.all([
       // Basic counts
+      prisma.specialty.count(),
+      prisma.lecture.count(),
+      prisma.question.count(),
+      prisma.report.count({ where: { status: 'pending' as any } }),
       prisma.user.count(),
       
       // Recent users (last 7 days)

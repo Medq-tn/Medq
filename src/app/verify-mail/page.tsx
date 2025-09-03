@@ -1,10 +1,15 @@
 import { redirect } from 'next/navigation';
 
-export default function VerifyMailAlias({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
+export default async function VerifyMailAlias({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolved = await searchParams;
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(searchParams || {})) {
+  for (const [key, value] of Object.entries(resolved || {})) {
     if (Array.isArray(value)) {
-      value.forEach(v => params.append(key, v));
+      value.forEach((v) => params.append(key, v));
     } else if (value !== undefined) {
       params.set(key, value);
     }

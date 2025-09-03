@@ -1,0 +1,376 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String             @unique(map: "profiles_email_idx")
+  role                  Role               @default(student)
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  password              String?
+  name                  String?
+  image                 String?
+  google_id             String?            @unique(map: "profiles_google_id_idx")
+  facebook_id           String?            @unique(map: "profiles_facebook_id_idx")
+  emailVerified         DateTime?          @map("email_verified")
+  passwordResetExpires  DateTime?          @map("password_reset_expires")
+  passwordResetToken    String?            @map("password_reset_token")
+  status                String             @default("pending")
+  verificationToken     String?            @map("verification_token")
+  verificationTokenExpires DateTime?       @map("verification_token_expires") @db.Timestamptz(6)
+  passwordUpdatedAt     DateTime?          @map("password_updated_at") @db.Timestamptz(6)
+  sexe                  String?
+  faculty               String?
+  niveauId              String?            @map("niveau_id") @db.Uuid
+  semesterId            String?            @map("semester_id") @db.Uuid
+  profileCompleted      Boolean            @default(false) @map("profile_completed")
+  hasActiveSubscription Boolean            @default(false) @map("has_active_subscription")
+  subscriptionExpiresAt DateTime?          @map("subscription_expires_at") @db.Timestamptz(6)
+  commentLikes          CommentLike[]
+  comments              Comment[]
+  courseGroups          CourseGroup[]
+  notifications         Notification[]
+  pinnedQuestions       PinnedQuestion[]
+  pinnedSpecialties     PinnedSpecialty[]
+  niveau                Niveau?            @relation(fields: [niveauId], references: [id])
+  semester              Semester?          @relation(fields: [semesterId], references: [id])
+  questionComments      QuestionComment[]
+  questionUserData      QuestionUserData[]
+  reports               Report[]
+  activities            UserActivity[]
+  progress              UserProgress[]
+
+  @@map("profiles")
+}
+
+model Specialty {
+  id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                    String
+  description             String?
+  icon                    String?
+  niveauId                String?           @map("niveau_id") @db.Uuid
+  semesterId              String?           @map("semester_id") @db.Uuid
+  isFree                  Boolean           @default(false) @map("is_free")
+  createdAt               DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  courseReminderMediaUrl  String?           @map("course_reminder_media_url")
+  courseReminderMediaType String?           @map("course_reminder_media_type")
+  courseGroups            CourseGroup[]
+  lectures                Lecture[]
+  pinnedSpecialties       PinnedSpecialty[]
+  sessions                Session[]
+  niveau                  Niveau?           @relation(fields: [niveauId], references: [id])
+  semester                Semester?         @relation(fields: [semesterId], references: [id])
+
+  @@map("specialties")
+}
+
+model Lecture {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  specialtyId   String         @map("specialty_id") @db.Uuid
+  title         String
+  description   String?
+  isFree        Boolean        @default(false) @map("is_free")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  comments      Comment[]
+  lectureGroups LectureGroup[]
+  specialty     Specialty      @relation(fields: [specialtyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  questions     Question[]
+  reports       Report[]
+  progress      UserProgress[]
+
+  @@index([specialtyId], map: "idx_lectures_specialty")
+  @@map("lectures")
+}
+
+model CourseGroup {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  specialtyId   String         @map("specialty_id") @db.Uuid
+  createdBy     String         @map("created_by") @db.Uuid
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  creator       User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  specialty     Specialty      @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  lectureGroups LectureGroup[]
+
+  @@unique([specialtyId, name], map: "unique_specialty_group_name")
+  @@map("course_groups")
+}
+
+model LectureGroup {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lectureId     String      @map("lecture_id") @db.Uuid
+  courseGroupId String      @map("course_group_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  courseGroup   CourseGroup @relation(fields: [courseGroupId], references: [id], onDelete: Cascade)
+  lecture       Lecture     @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@unique([lectureId, courseGroupId], map: "unique_lecture_group")
+  @@map("lecture_groups")
+}
+
+model PinnedSpecialty {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  specialtyId String    @map("specialty_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, specialtyId], map: "unique_user_specialty_pin")
+  @@map("pinned_specialties")
+}
+
+model PinnedQuestion {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId], map: "unique_user_question_pin")
+  @@map("pinned_questions")
+}
+
+model Comment {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lectureId       String        @map("lecture_id") @db.Uuid
+  userId          String        @map("user_id") @db.Uuid
+  content         String
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  isAnonymous     Boolean       @default(false) @map("is_anonymous")
+  parentCommentId String?       @map("parent_comment_id") @db.Uuid
+  likes           CommentLike[]
+  lecture         Lecture       @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  parent          Comment?      @relation("CommentToComment", fields: [parentCommentId], references: [id])
+  replies         Comment[]     @relation("CommentToComment")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([lectureId], map: "idx_comments_lecture")
+  @@index([parentCommentId], map: "idx_comments_parent")
+  @@map("comments")
+}
+
+model CommentLike {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commentId String   @map("comment_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId], map: "unique_comment_like")
+  @@index([userId], map: "idx_comment_likes_user")
+  @@map("comment_likes")
+}
+
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  message   String
+  type      String   @default("info")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead], map: "idx_notifications_user_read")
+  @@map("notifications")
+}
+
+model Question {
+  id                      String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lectureId               String               @map("lecture_id") @db.Uuid
+  type                    String
+  text                    String
+  options                 Json?
+  correctAnswers          String[]             @map("correct_answers")
+  explanation             String?
+  hidden                  Boolean              @default(false)
+  createdAt               DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  courseReminder          String?              @map("course_reminder")
+  number                  Int?
+  session                 String?
+  mediaUrl                String?              @map("media_url")
+  mediaType               String?              @map("media_type")
+  courseReminderMediaUrl  String?              @map("course_reminder_media_url")
+  courseReminderMediaType String?              @map("course_reminder_media_type")
+  caseNumber              Int?                 @map("case_number")
+  caseText                String?              @map("case_text")
+  caseQuestionNumber      Int?                 @map("case_question_number")
+  parentQuestionId        String?              @map("parent_question_id") @db.Uuid
+  pinnedQuestions         PinnedQuestion[]
+  questionComments        QuestionComment[]
+  optionStats             QuestionOptionStat[]
+  userData                QuestionUserData[]
+  lecture                 Lecture              @relation(fields: [lectureId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parent                  Question?            @relation("QuestionToQuestion", fields: [parentQuestionId], references: [id])
+  children                Question[]           @relation("QuestionToQuestion")
+  reports                 Report[]
+
+  @@index([number], map: "idx_questions_number")
+  @@index([caseNumber, caseQuestionNumber], map: "idx_questions_case")
+  @@index([parentQuestionId], map: "idx_questions_parent")
+  @@map("questions")
+}
+
+model QuestionUserData {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  notes      String?
+  highlights Json?
+  attempts   Int      @default(0)
+  lastScore  Float?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId], map: "unique_user_question_data")
+  @@index([userId], map: "idx_question_user_data_user")
+  @@index([questionId], map: "idx_question_user_data_question")
+  @@map("question_user_data")
+}
+
+model QuestionComment {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId      String            @map("question_id") @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  content         String
+  isAnonymous     Boolean           @default(false) @map("is_anonymous")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  parentCommentId String?           @map("parent_comment_id") @db.Uuid
+  parent          QuestionComment?  @relation("QuestionCommentToQuestionComment", fields: [parentCommentId], references: [id])
+  replies         QuestionComment[] @relation("QuestionCommentToQuestionComment")
+  question        Question          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([questionId], map: "idx_question_comments_question")
+  @@index([userId], map: "idx_question_comments_user")
+  @@index([parentCommentId], map: "idx_question_comments_parent")
+  @@map("question_comments")
+}
+
+model QuestionOptionStat {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  optionKey  String   @map("option_key")
+  count      Int      @default(0)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, optionKey], map: "unique_question_option_key")
+  @@index([questionId], map: "idx_question_option_stats_question")
+  @@map("question_option_stats")
+}
+
+model UserProgress {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  lectureId    String   @map("lecture_id") @db.Uuid
+  questionId   String?  @map("question_id") @db.Uuid
+  completed    Boolean  @default(false)
+  score        Float?
+  lastAccessed DateTime @default(now()) @map("last_accessed") @db.Timestamptz(6)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lecture      Lecture  @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lectureId, questionId], map: "unique_user_lecture_question")
+  @@index([userId, questionId], map: "idx_user_progress_user_question")
+  @@index([userId, lectureId], map: "idx_user_progress_user_lecture")
+  @@map("user_progress")
+}
+
+model UserActivity {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String   @default("question_attempt")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt], map: "idx_user_activity_user_date")
+  @@map("user_activity")
+}
+
+model Report {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId String     @map("question_id") @db.Uuid
+  lectureId  String     @map("lecture_id") @db.Uuid
+  message    String?
+  userId     String?    @map("user_id") @db.Uuid
+  status     String     @default("pending")
+  reportType ReportType @default(erreur_de_saisie) @map("type")
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  lecture    Lecture    @relation(fields: [lectureId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user       User?      @relation(fields: [userId], references: [id])
+
+  @@map("reports")
+}
+
+model Niveau {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String      @unique
+  order     Int         @unique
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  users     User[]
+  semesters Semester[]
+  sessions  Session[]
+  Specialty Specialty[]
+
+  @@map("niveaux")
+}
+
+model Semester {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  order       Int
+  niveauId    String      @map("niveau_id") @db.Uuid
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  users       User[]
+  niveau      Niveau      @relation(fields: [niveauId], references: [id])
+  sessions    Session[]
+  specialties Specialty[]
+
+  @@unique([niveauId, order], map: "unique_niveau_semester_order")
+  @@map("semesters")
+}
+
+model Session {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  niveauId      String?    @map("niveau_id") @db.Uuid
+  semesterId    String?    @map("semester_id") @db.Uuid
+  specialtyId   String?    @map("specialty_id") @db.Uuid
+  pdfUrl        String?    @map("pdf_url")
+  correctionUrl String?    @map("correction_url")
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  niveau        Niveau?    @relation(fields: [niveauId], references: [id])
+  semester      Semester?  @relation(fields: [semesterId], references: [id])
+  specialty     Specialty? @relation(fields: [specialtyId], references: [id])
+
+  @@map("sessions")
+}
+
+enum Role {
+  student
+  maintainer
+  admin
+}
+
+enum ReportType {
+  erreur_de_saisie
+  question_hors_cours
+  correction_erronee
+}

@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
@@ -43,6 +43,7 @@ export function AdminSidebar() {
   const isMobile = useIsMobile();
   const currentTab = searchParams.get('tab') || 'dashboard';
   const iconSize = state === 'expanded' ? 'h-5 w-5' : 'h-6 w-6';
+  const isCollapsedDesktop = !isMobile && state !== 'expanded';
   
   const studentPanelItem = {
     label: t('admin.studentPanel') || 'Student Panel',
@@ -87,10 +88,26 @@ export function AdminSidebar() {
     toggleSidebar();
   };
 
+  // Hide Crisp bubble when mobile sidebar is open to avoid overlap
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const w = window as any;
+    if (!w.$crisp) return;
+    try {
+      if (openMobile) {
+        w.$crisp.push(["do", "chat:hide"]);
+      } else {
+        w.$crisp.push(["do", "chat:show"]);
+      }
+    } catch (_) {
+      // noop
+    }
+  }, [openMobile]);
+
   return (
     <>
-      <Sidebar className="border-r border-border bg-background shadow-lg max-w-[80vw] sm:max-w-none" collapsible="icon">
-        <SidebarHeader className={`border-b border-border py-3 sm:py-4 ${state === 'expanded' ? 'px-4 sm:px-6' : 'px-2'}`}>
+  <Sidebar className="border-r border-border bg-background shadow-xl sm:shadow-lg group-data-[collapsible=icon]:bg-background group-data-[collapsible=icon]:shadow-lg group-data-[collapsible=icon]:border-r" collapsible="icon">
+  <SidebarHeader className={`border-b border-border py-3 sm:py-4 ${state === 'expanded' ? 'bg-white px-4 sm:px-6' : 'bg-transparent px-2 border-b-0'}`}>
           <div className="flex items-center justify-center">
             <div className="flex items-center gap-3">
               {isMobile && (
@@ -98,19 +115,19 @@ export function AdminSidebar() {
                   variant="ghost"
                   size="icon"
                   onClick={handleCloseSidebar}
-                  className="md:hidden hover:bg-muted"
+      className="md:hidden hover:bg-muted rounded-xl"
                 >
                   <X className="h-5 w-5" />
                   <span className="sr-only">Close sidebar</span>
                 </Button>
               )}
-              {state === "expanded" ? (
+      {(state === "expanded" || isMobile) ? (
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
                     <Brain className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-bold text-base sm:text-lg bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+        <span className="font-bold text-base sm:text-lg bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                       MedQ
                     </span>
                     <span className="text-[10px] sm:text-xs text-muted-foreground">Admin Panel</span>
@@ -125,10 +142,10 @@ export function AdminSidebar() {
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <ScrollArea className="h-full">
+      <ScrollArea className={`h-full ${state === 'expanded' ? 'pr-1' : 'pr-0'} pb-4`}>
             <SidebarGroup className="mt-3 sm:mt-4">
               <SidebarGroupContent>
-                <SidebarMenu className={`space-y-2 ${state === 'expanded' ? 'px-2 sm:px-3' : 'px-0'}`}>
+                <SidebarMenu className={`space-y-1.5 ${state === 'expanded' ? 'px-2 sm:px-3' : 'px-0'}`}>
                   {menuItems.slice(0, -1).map((item) => {
                     // Check if current page matches the item
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -138,23 +155,23 @@ export function AdminSidebar() {
                         <SidebarMenuButton 
                           asChild 
                           tooltip={item.label}
-                          className={
-                            `group transition-all duration-200 font-medium rounded-xl ${
-                              state === 'expanded' 
-                                ? 'px-3 py-3 min-h-[44px] flex items-center' 
-                                : 'p-0 min-h-[44px] w-full flex items-center justify-center'
-                            } ${
-                              isActive
-                                ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg shadow-blue-500/25'
-                                : 'hover:bg-muted/80 text-foreground hover:text-blue-600'
-                            }`
-                          }
+              className={(() => {
+                            const base = 'group transition-all duration-200 font-medium rounded-xl';
+                            if (isCollapsedDesktop) {
+                              const active = isActive ? 'bg-blue-600 text-white shadow-lg' : 'bg-blue-50 text-blue-700 hover:bg-blue-100';
+                return `${base} h-10 w-full mx-0 flex items-center justify-center ${active}`;
+                            }
+                            const bg = isActive ? 'bg-blue-600 text-white shadow-lg' : 'bg-white hover:bg-blue-50 text-gray-900';
+                            return `${base} px-3 py-3 min-h-[44px] flex items-center ${bg}`;
+                          })()}
                         >
-                          <Link href={item.href} className={`${state === 'expanded' ? 'flex items-center gap-3 w-full' : 'flex items-center justify-center w-full h-full'}`}>
-                            <item.icon className={`${iconSize} ${isActive ? 'text-white' : 'text-blue-500 group-hover:text-blue-600'} transition-all flex-shrink-0`} />
-                            <span className={`${state === 'expanded' ? 'block' : 'sr-only'} font-medium text-sm`}>
-                              {item.label}
-                            </span>
+                          <Link href={item.href} className={`flex items-center ${state === 'expanded' ? 'gap-3 w-full' : 'justify-center'}`}>
+                            <item.icon className={`${iconSize} ${isCollapsedDesktop ? 'text-current' : (isActive ? 'text-white' : 'text-blue-600')} transition-all flex-shrink-0`} />
+                            {!isCollapsedDesktop && (
+                              <span className={`block font-medium text-sm`}>
+                                {item.label}
+                              </span>
+                            )}
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -170,23 +187,23 @@ export function AdminSidebar() {
           </ScrollArea>
         </SidebarContent>
         
-        <SidebarFooter className={`border-t border-border py-2.5 sm:py-3 bg-background ${state === 'expanded' ? 'px-3 sm:px-4' : 'px-2'}`}>
-          <div className="space-y-2">
+  <SidebarFooter className={`border-t border-border py-2.5 sm:py-3 ${state === 'expanded' ? 'bg-white px-3 sm:px-4' : 'bg-transparent px-2 border-t-0'}`}>
+      <div className="space-y-2 pb-[max(env(safe-area-inset-bottom),8px)]">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl ${
-                    state === 'expanded' 
-                      ? 'w-full justify-start px-3 py-3 min-h-[44px]' 
-                      : 'w-full h-[44px] p-0 flex items-center justify-center'
-                  }`}
+                  variant={isCollapsedDesktop ? 'outline' : 'ghost'}
+                  size={isCollapsedDesktop ? 'icon' : 'sm'}
+                  className={`${isCollapsedDesktop
+                    ? 'h-10 w-full mx-0 rounded-xl border-red-200 text-red-600 hover:bg-red-50 dark:text-red-400 dark:border-red-600/40 dark:hover:bg-red-900/20 flex items-center justify-center'
+                    : 'text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl w-full justify-start px-3 py-3 min-h-[44px]'} `}
                   onClick={handleSignOut}
                   title={t('auth.signOut')}
                 >
                   <LogOut className="h-5 w-5 flex-shrink-0" />
-                  {state === "expanded" && <span className="ml-3 font-medium text-sm">{t('auth.signOut')}</span>}
+                  {!isCollapsedDesktop && (
+                    <span className="ml-3 font-medium text-sm">{t('auth.signOut')}</span>
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right" align="center">
@@ -196,7 +213,7 @@ export function AdminSidebar() {
           </div>
         </SidebarFooter>
       </Sidebar>
-      <SidebarRail />
+    {/* SidebarRail removed to prevent duplicate floating icons when collapsed */}
     </>
   );
 }

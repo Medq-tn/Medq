@@ -15,7 +15,11 @@ import { useTranslation } from 'react-i18next';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-export function AppHeader() {
+type AppHeaderProps = {
+  hideSearch?: boolean;
+};
+
+export function AppHeader({ hideSearch = false }: AppHeaderProps) {
   const { user, isAdmin, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
@@ -40,8 +44,10 @@ export function AppHeader() {
     }
   };
 
+  const isOpen = isMobile ? openMobile : open;
+
   return (
-    <header className="border-b border-border/40 bg-gradient-to-r from-background via-background to-muted/20 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 sticky top-0 z-40 shadow-sm">
+    <header className="border-b border-border/40 bg-gradient-to-r from-background via-background to-muted/20 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 sticky top-0 z-50 shadow-sm pt-[env(safe-area-inset-top)]">
       <div className="flex h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6">
         {/* Left Section: Sidebar toggle + Branding */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -50,9 +56,10 @@ export function AppHeader() {
             size="icon" 
             onClick={handleSidebarToggle}
             className="shrink-0 hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 rounded-xl"
+            aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
           >
-            {open || openMobile ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            <span className="sr-only">Toggle sidebar</span>
+            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <span className="sr-only">{isOpen ? 'Close sidebar' : 'Open sidebar'}</span>
           </Button>
           <Button 
             variant="link" 
@@ -66,8 +73,8 @@ export function AppHeader() {
           </Button>
         </div>
 
-        {/* Center Section: Search (desktop) */}
-        {user && (
+  {/* Center Section: Search (desktop) */}
+  {user && !hideSearch && (
           <div className="hidden md:flex flex-1 items-center">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -10,9 +10,8 @@ export default function CrispChat() {
   useEffect(() => {
     const id = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID;
     if (!id) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("Crisp: NEXT_PUBLIC_CRISP_WEBSITE_ID is not set");
-      }
+      // Log even in production so we can see it in Vercel logs/console
+      console.error("Crisp: NEXT_PUBLIC_CRISP_WEBSITE_ID is not set. Widget will not load.");
       return;
     }
     try {
@@ -21,6 +20,25 @@ export default function CrispChat() {
         (window as any).$crisp = (window as any).$crisp || [];
       }
       Crisp.configure(id);
+      // When SDK is ready, ensure widget is visible (do not auto-open)
+      const w = window as any;
+      if (typeof window !== 'undefined') {
+        try {
+          w.$crisp.push(["on", "ready", () => {
+            try {
+              w.$crisp.push(["do", "chat:show"]);
+              // On small screens, some themes hide the bubble; force show
+              if (window.innerWidth <= 768) {
+                w.$crisp.push(["do", "chat:show"]);
+              }
+            } catch (_) {
+              // noop
+            }
+          }]);
+        } catch (_) {
+          // noop
+        }
+      }
     } catch (e) {
       console.warn("Crisp: failed to configure", e);
     }

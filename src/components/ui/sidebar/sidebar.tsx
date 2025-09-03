@@ -76,7 +76,7 @@ export const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className="w-[--sidebar-width] bg-white p-0 text-gray-900 [&>button]:hidden shadow-2xl ring-1 ring-black/5 z-[60]"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -85,7 +85,9 @@ export const Sidebar = React.forwardRef<
             side={side}
           >
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-            <div className="flex h-full w-full flex-col">{children}</div>
+            <div className="flex h-full w-full flex-col pb-[max(env(safe-area-inset-bottom),16px)] pt-[max(env(safe-area-inset-top),8px)] gap-2">
+              {children}
+            </div>
           </SheetContent>
         </Sheet>
       )
@@ -109,7 +111,7 @@ export const Sidebar = React.forwardRef<
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
+              : "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_2px)]"
           )}
         />
         <div
@@ -121,7 +123,7 @@ export const Sidebar = React.forwardRef<
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              : "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_2px)] group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className
           )}
           {...props}

@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Search, Filter, ArrowUpDown, X, Check, Trash, Loader2 } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, X, Check, Trash, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getUsers, updateUserRole, updateUserNiveau, getAllNiveaux } from '@/lib/actions/admin';
 import { toast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -52,6 +52,7 @@ export function ClerkUsersPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('Created');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
   
   // Role change confirmation dialog state
@@ -101,9 +102,11 @@ export function ClerkUsersPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Request failed');
       }
-      // Commit removal after server success
-      setUsers(prev => prev.filter(u => u.id !== userId));
-      toast({ title: 'User deleted', description: `${userEmail} has been removed.` });
+  // Commit removal after server success
+  setUsers(prev => prev.filter(u => u.id !== userId));
+  toast({ title: 'User deleted', description: `${userEmail} has been removed.` });
+  // Refresh list to update totals and fill page if needed
+  fetchUsers(currentPage, search, filters, pageSize);
     } catch (err) {
       console.error('Delete user error:', err);
       toast({ title: 'Error', description: 'Failed to delete user', variant: 'destructive' });
@@ -124,11 +127,16 @@ export function ClerkUsersPage() {
     }
   };
 
-  const fetchUsers = async (page = 1, searchTerm = search, currentFilters = filters) => {
+  const fetchUsers = async (
+    page = 1,
+    searchTerm = search,
+    currentFilters = filters,
+    pageSizeArg = pageSize
+  ) => {
     setIsLoading(true);
     try {
       const [usersResult, niveauxResult] = await Promise.all([
-        getUsers(page, 10, searchTerm, currentFilters),
+        getUsers(page, pageSizeArg, searchTerm, currentFilters),
         getAllNiveaux()
       ]);
       
@@ -264,6 +272,12 @@ export function ClerkUsersPage() {
   useEffect(() => {
     fetchUsers(currentPage, search, filters);
   }, [filters]);
+
+  // Refetch when page or page size changes
+  useEffect(() => {
+    fetchUsers(currentPage, search, filters, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -434,6 +448,29 @@ export function ClerkUsersPage() {
     </Card>
   );
 
+  const MobileListSkeleton = () => (
+    <div className="space-y-2 md:hidden">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Card key={i}>
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 bg-muted/70 dark:bg-muted/30 rounded-full animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-1/3 bg-muted/70 dark:bg-muted/30 rounded animate-pulse" />
+                <div className="h-3 w-1/2 bg-muted/70 dark:bg-muted/30 rounded animate-pulse" />
+              </div>
+              <div className="h-8 w-8 bg-muted/70 dark:bg-muted/30 rounded-full animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="h-9 w-full bg-muted/70 dark:bg-muted/30 rounded animate-pulse" />
+              <div className="h-9 w-full bg-muted/70 dark:bg-muted/30 rounded animate-pulse" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -442,9 +479,9 @@ export function ClerkUsersPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 w-full">
+          <div className="relative flex-1 w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search..."
@@ -456,7 +493,7 @@ export function ClerkUsersPage() {
           </div>
           
           <Select value={sortBy} onValueChange={setSortBy} disabled={isLoading}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-40">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Sort by:</span>
                 <span>{sortBy}</span>
@@ -489,7 +526,7 @@ export function ClerkUsersPage() {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-96 p-0 border border-border bg-background dark:bg-slate-900 shadow-lg dark:shadow-2xl dark:shadow-black/20" align="end">
+            <PopoverContent className="w-80 sm:w-96 max-w-[92vw] p-0 border border-border bg-background dark:bg-slate-900 shadow-lg dark:shadow-2xl dark:shadow-black/20" align="end">
               <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -661,7 +698,7 @@ export function ClerkUsersPage() {
 
       {/* Active Filters Display */}
       {getActiveFilterCount() > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-muted/30 dark:bg-muted/20 rounded-lg border dark:border-border">
+        <div className="flex items-center gap-3 flex-wrap p-3 bg-muted/30 dark:bg-muted/20 rounded-lg border dark:border-border">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium text-muted-foreground">Active filters:</span>
@@ -726,10 +763,19 @@ export function ClerkUsersPage() {
         </div>
       )}
 
-      {/* Users Table */}
-      {isLoading ? <TableSkeleton /> : (
+      {/* Users List */}
+      {isLoading ? (
+        <>
+          <div className="hidden md:block">
+            <TableSkeleton />
+          </div>
+          <MobileListSkeleton />
+        </>
+      ) : (
       <Card>
         <CardContent className="p-0">
+          {/* Desktop table */}
+          <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -856,42 +902,125 @@ export function ClerkUsersPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden p-2 space-y-2">
+            {users.map((user) => (
+              <Card key={user.id} className={`border rounded-lg ${pendingDeleteIds.has(user.id) ? 'opacity-50 pointer-events-none' : ''}`}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className={`${getAvatarColor(user.id)} text-white text-sm font-medium`}>
+                        {getInitials(user.name, user.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate text-[15px]">
+                        {user.name || user.email.split('@')[0]}
+                      </div>
+                      <div className="text-muted-foreground text-xs truncate">
+                        {user.email}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => confirmDeleteInline(user.id, user.email)}
+                      aria-label={`Delete ${user.email}`}
+                      disabled={pendingDeleteIds.has(user.id)}
+                      aria-busy={pendingDeleteIds.has(user.id)}
+                      className={`h-8 w-8 rounded-full border-red-200 text-red-600 hover:bg-red-50 dark:text-red-400 dark:border-red-600/40 dark:hover:bg-red-900/20 ${pendingDeleteIds.has(user.id) ? 'opacity-60' : ''}`}
+                    >
+                      {pendingDeleteIds.has(user.id) ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">Role</Label>
+                      <Select 
+                        value={user.role} 
+                        onValueChange={(newRole: 'student' | 'maintainer' | 'admin') => handleRoleChange(user.id, newRole)}
+                      >
+                        <SelectTrigger className="w-full mt-1 h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="maintainer">Maintainer</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">Niveau</Label>
+                      <Select 
+                        value={user.niveau?.id || "none"} 
+                        onValueChange={(niveauId) => handleNiveauChange(user.id, niveauId === "none" ? null : niveauId)}
+                      >
+                        <SelectTrigger className="w-full mt-1 h-9">
+                          <SelectValue placeholder="Select niveau" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No niveau</SelectItem>
+                          {niveaux.map((niveau) => (
+                            <SelectItem key={niveau.id} value={niveau.id}>
+                              {niveau.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                    <span>Joined {formatDate(user.createdAt)}</span>
+                    <span>Last signed in {formatTime(user.createdAt)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </CardContent>
       </Card>
       )}
 
       {/* Pagination */}
       {pagination && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 justify-between text-sm text-muted-foreground">
           <div>
-            1-10 of {pagination.totalItems}
+            {(() => {
+              const start = (currentPage - 1) * pageSize + 1;
+              const end = Math.min(currentPage * pageSize, pagination.totalItems);
+              return `${start}-${end} of ${pagination.totalItems}`;
+            })()}
           </div>
-          <div className="flex items-center gap-2">
-            <span>Results per page</span>
-            <Select defaultValue="10">
-              <SelectTrigger className="w-16 h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-1 ml-4">
-              <Button variant="ghost" size="sm" disabled={currentPage === 1}>
-                1
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline">Rows per page</span>
+              <Select value={String(pageSize)} onValueChange={(val) => { setCurrentPage(1); setPageSize(Number(val)); }}>
+                <SelectTrigger className="w-16 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              {pagination.totalPages > 1 && (
-                <Button variant="ghost" size="sm">
-                  2
-                </Button>
-              )}
-              {pagination.totalPages > 2 && (
-                <Button variant="ghost" size="sm">
-                  3
-                </Button>
-              )}
+              <span className="min-w-[6ch] text-center">Page {currentPage} / {Math.max(1, pagination.totalPages)}</span>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))} disabled={currentPage >= pagination.totalPages}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>

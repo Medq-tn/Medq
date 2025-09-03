@@ -8,6 +8,7 @@ import { Users, UserPlus, UserCheck, UserX, TrendingUp, Calendar, MoreHorizontal
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useState, useEffect } from 'react';
 import { getAdminStats, getUsers, getAdminAnalytics } from '@/lib/actions/admin';
+import Link from 'next/link';
 
 interface AnalyticsData {
   overview: {
@@ -42,6 +43,9 @@ interface AnalyticsData {
 export function EnhancedAnalyticsDashboard() {
   const [dateRange, setDateRange] = useState('Last 30 days');
   const [interval, setInterval] = useState<'Daily' | 'Weekly' | 'Monthly'>('Weekly');
+  const [userPage, setUserPage] = useState(1);
+  const [userLimit, setUserLimit] = useState(5);
+  const [usersTotal, setUsersTotal] = useState(0);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
     overview: {
       active: 0,
@@ -58,11 +62,12 @@ export function EnhancedAnalyticsDashboard() {
       totalSignUps: 0
     }
   });
-  const [loading, setLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(false);
 
-  const fetchAnalyticsData = async () => {
+  const fetchAnalytics = async () => {
     try {
-      setLoading(true);
+      setAnalyticsLoading(true);
       
       // Parse date range for API call
       const today = new Date();
@@ -84,9 +89,8 @@ export function EnhancedAnalyticsDashboard() {
       }
       
       // Fetch real analytics data
-      const [adminStats, usersData, analyticsResult] = await Promise.all([
+      const [adminStats, analyticsResult] = await Promise.all([
         getAdminStats(),
-        getUsers(1, 10),
         getAdminAnalytics({
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
@@ -94,15 +98,6 @@ export function EnhancedAnalyticsDashboard() {
         })
       ]);
       
-      // Transform recent users data
-      const transformedRecentUsers = usersData.users.map(user => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        status: determineUserStatus(user),
-        createdAt: user.createdAt,
-      }));
-
       // Transform chart data
       const chartData = analyticsResult.chartData.map(item => ({
         date: formatChartDate(item.date, interval),
@@ -121,19 +116,46 @@ export function EnhancedAnalyticsDashboard() {
           period: analyticsResult.overview.period || `${dateRange} (${interval})`
         },
         chartData,
-        recentUsers: transformedRecentUsers,
+        recentUsers: analyticsData.recentUsers, // keep current list; updated separately
         reports: analyticsResult.reports,
       });
     } catch (error) {
       console.error('Error fetching analytics data:', error);
     } finally {
-      setLoading(false);
+      setAnalyticsLoading(false);
+    }
+  };
+
+  const fetchUsersPage = async () => {
+    try {
+      setUsersLoading(true);
+      const usersData = await getUsers(userPage, userLimit);
+      const transformedRecentUsers = usersData.users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        status: determineUserStatus(user),
+        createdAt: user.createdAt,
+      }));
+      setUsersTotal(usersData.total);
+      setAnalyticsData(prev => ({
+        ...prev,
+        recentUsers: transformedRecentUsers,
+      }));
+    } catch (error) {
+      console.error('Error fetching users page:', error);
+    } finally {
+      setUsersLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAnalyticsData();
+    fetchAnalytics();
   }, [dateRange, interval]);
+
+  useEffect(() => {
+    fetchUsersPage();
+  }, [userPage, userLimit]);
 
   const determineUserStatus = (user: any): 'retained' | 'reactivated' | 'new' | 'churned' => {
     if (user.hasActiveSubscription) return 'retained';
@@ -146,11 +168,17 @@ export function EnhancedAnalyticsDashboard() {
 
   const formatChartDate = (date: string, interval: string): string => {
     const d = new Date(date);
+    if (Number.isNaN(d.getTime())) {
+      return '';
+    }
     switch (interval) {
       case 'Daily':
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      case 'Weekly':
-        return `Week ${Math.ceil(d.getDate() / 7)}, ${d.toLocaleDateString('en-US', { month: 'short' })}`;
+      case 'Weekly': {
+        const week = Math.max(1, Math.ceil(d.getDate() / 7));
+        const mon = d.toLocaleDateString('en-US', { month: 'short' });
+        return `Week ${week}, ${mon}`;
+      }
       case 'Monthly':
         return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       default:
@@ -198,7 +226,7 @@ export function EnhancedAnalyticsDashboard() {
 
   return (
     <div className="space-y-6">
-      {loading ? (
+  {analyticsLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -209,11 +237,11 @@ export function EnhancedAnalyticsDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Date range</span>
             <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -226,7 +254,7 @@ export function EnhancedAnalyticsDashboard() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Interval</span>
             <Select value={interval} onValueChange={(value: 'Daily' | 'Weekly' | 'Monthly') => setInterval(value)}>
-              <SelectTrigger className="w-24">
+              <SelectTrigger className="w-full sm:w-24">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -289,28 +317,28 @@ export function EnhancedAnalyticsDashboard() {
       {/* Main Chart */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 items-center">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <div className="w-3 h-3 rounded-full bg-green-500"></div>
               <span className="text-sm">New users</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <div className="w-3 h-3 rounded-full bg-purple-500"></div>
               <span className="text-sm">Reactivated</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <div className="w-3 h-3 rounded-full bg-blue-500"></div>
               <span className="text-sm">Retained</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <div className="w-3 h-3 rounded-full bg-gray-400"></div>
               <span className="text-sm">Retained churned</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <div className="w-3 h-3 rounded-full bg-gray-600"></div>
               <span className="text-sm">Reactivated churned</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <div className="w-3 h-3 rounded-full bg-black"></div>
               <span className="text-sm">New users churned</span>
             </div>
@@ -355,15 +383,30 @@ export function EnhancedAnalyticsDashboard() {
         {/* User Cohort */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
               <CardTitle>User cohort</CardTitle>
-              <div className="text-sm text-muted-foreground">1-5 of 180 • Results per page: 5</div>
+                <div className="text-sm text-muted-foreground">
+                  {`${(usersTotal === 0 ? 0 : (userPage - 1) * userLimit + 1)}-${Math.min(userPage * userLimit, usersTotal)} of ${usersTotal} • Results per page:`}
+                  <select
+                    className="ml-1 rounded border border-border bg-background px-2 py-0.5 text-xs"
+                    value={userLimit}
+                    onChange={(e) => {
+                      const newLimit = Number(e.target.value);
+                      setUserLimit(newLimit);
+                      setUserPage(1);
+                    }}
+                  >
+                    {[5, 10, 20, 50].map(n => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {analyticsData.recentUsers.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-3 rounded-lg border">
+                <div key={user.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.id)}`}>
                       {getInitials(user.name, user.email)}
@@ -373,7 +416,7 @@ export function EnhancedAnalyticsDashboard() {
                       <div className="text-sm text-muted-foreground">{user.email}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 sm:flex-row flex-wrap">
                     <Badge className={getStatusColor(user.status)}>
                       {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                     </Badge>
@@ -390,11 +433,32 @@ export function EnhancedAnalyticsDashboard() {
                   </div>
                 </div>
               ))}
+              {usersLoading && (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              )}
             </div>
-            <div className="flex justify-between items-center mt-4 pt-4 border-t">
-              <Button variant="outline" size="sm">Previous</Button>
-              <span className="text-sm text-muted-foreground">1/36</span>
-              <Button variant="outline" size="sm">Next</Button>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-4 pt-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                disabled={userPage <= 1 || usersLoading}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {usersTotal === 0 ? '0/0' : `${userPage}/${Math.max(1, Math.ceil(usersTotal / userLimit))}`}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUserPage(p => Math.min(Math.max(1, Math.ceil(usersTotal / userLimit)), p + 1))}
+                disabled={userPage >= Math.max(1, Math.ceil(usersTotal / userLimit)) || usersLoading}
+              >
+                Next
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -426,8 +490,10 @@ export function EnhancedAnalyticsDashboard() {
                 <span>{analyticsData.chartData[0]?.date || 'Début'}</span>
                 <span>{analyticsData.chartData[analyticsData.chartData.length - 1]?.date || 'Fin'}</span>
               </div>
-              <Button variant="link" className="p-0 h-auto text-xs">
-                Voir tous les utilisateurs →
+              <Button variant="link" className="p-0 h-auto text-xs" asChild>
+                <Link href="/admin/users" aria-label="Voir tous les utilisateurs">
+                  Voir tous les utilisateurs →
+                </Link>
               </Button>
             </div>
 
@@ -452,8 +518,10 @@ export function EnhancedAnalyticsDashboard() {
                 <span>{analyticsData.chartData[0]?.date || 'Début'}</span>
                 <span>{analyticsData.chartData[analyticsData.chartData.length - 1]?.date || 'Fin'}</span>
               </div>
-              <Button variant="link" className="p-0 h-auto text-xs">
-                Voir tous les utilisateurs →
+              <Button variant="link" className="p-0 h-auto text-xs" asChild>
+                <Link href="/admin/users" aria-label="Voir tous les utilisateurs">
+                  Voir tous les utilisateurs →
+                </Link>
               </Button>
             </div>
 
@@ -478,8 +546,10 @@ export function EnhancedAnalyticsDashboard() {
                 <span>{analyticsData.chartData[0]?.date || 'Début'}</span>
                 <span>{analyticsData.chartData[analyticsData.chartData.length - 1]?.date || 'Fin'}</span>
               </div>
-              <Button variant="link" className="p-0 h-auto text-xs">
-                Voir tous les utilisateurs →
+              <Button variant="link" className="p-0 h-auto text-xs" asChild>
+                <Link href="/admin/users" aria-label="Voir tous les utilisateurs">
+                  Voir tous les utilisateurs →
+                </Link>
               </Button>
             </div>
           </CardContent>

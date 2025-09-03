@@ -106,8 +106,8 @@ MedQ est une plateforme moderne d'éducation médicale conçue spécifiquement p
    JWT_SECRET="your-secret-key-here"
 
    # Canonical Base URL for links (used in emails)
-   # Prefer APP_URL in production (e.g., https://medq.tn). On Vercel, VERCEL_URL is used as fallback.
-   APP_URL="http://localhost:3000"
+   # Set NEXT_PUBLIC_APP_URL in all environments; if unset, it falls back to https://medq.tn
+   NEXT_PUBLIC_APP_URL="http://localhost:3000"
    ```
 
 4. **Set up the database**

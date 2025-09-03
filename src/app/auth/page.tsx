@@ -53,9 +53,9 @@ export default function AuthPage() {
       <ForceLightTheme />
       <div className="min-h-screen flex flex-col md:flex-row overflow-x-hidden">
       {/* Left Panel - Marketing Content */}
-  <div className="hidden md:flex w-full md:w-1/2 bg-gradient-to-br from-medblue-600 to-medblue-800 text-white p-10 lg:p-12 flex-col justify-center relative overflow-hidden">
+  <div className="hidden md:flex w-full md:w-1/2 bg-gradient-to-br from-medblue-600 to-medblue-800 text-white p-8 lg:p-10 xl:p-12 flex-col justify-center relative overflow-hidden">
         <div className="relative z-10">
-          <h1 className="text-4xl lg:text-6xl font-bold mb-4">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4">
             La nouvelle plateforme de<br />
             <span className="text-medblue-200">Questions révolutionnaire !</span>
           </h1>
@@ -68,17 +68,17 @@ export default function AuthPage() {
               height={48}
               sizes="200px"
               priority
-              className="h-10 lg:h-12 w-auto object-contain transition-opacity duration-300"
+              className="h-9 lg:h-10 xl:h-12 w-auto object-contain transition-opacity duration-300"
             />
           </div>
           
-          <p className="text-medblue-200 text-lg lg:text-2xl mb-12">
+          <p className="text-medblue-200 text-base lg:text-lg xl:text-2xl mb-10 xl:mb-12">
             Destinée aux étudiants en médecine
           </p>
         </div>
         
         {/* Professional Device Mockups - Much Bigger */}
-        <div className="absolute bottom-8 left-8">
+        <div className="hidden xl:block absolute bottom-8 left-8">
           {/* Premium Laptop Mockup - Much Bigger */}
           <div className="relative transform -rotate-12">
             {/* Laptop Screen */}
@@ -121,7 +121,7 @@ export default function AuthPage() {
         </div>
         
         {/* Premium Phone Mockup - Much Bigger */}
-        <div className="absolute top-16 right-12">
+  <div className="hidden xl:block absolute top-16 right-12">
           <div className="w-32 h-64 bg-gray-900 rounded-3xl border-2 border-gray-700 p-2 transform rotate-12">
             <div className="w-full h-full bg-white rounded-2xl overflow-hidden">
               {/* Status Bar */}
@@ -177,19 +177,19 @@ export default function AuthPage() {
         </div>
         
         {/* Floating Elements for Depth */}
-        <div className="absolute top-1/3 right-1/4">
+  <div className="hidden xl:block absolute top-1/3 right-1/4">
           <div className="w-6 h-6 bg-white bg-opacity-10 rounded-full animate-pulse"></div>
         </div>
-        <div className="absolute bottom-1/3 right-1/3">
+  <div className="hidden xl:block absolute bottom-1/3 right-1/3">
           <div className="w-4 h-4 bg-medblue-300 bg-opacity-20 rounded-full animate-pulse delay-1000"></div>
         </div>
-        <div className="absolute top-1/2 left-1/3">
+  <div className="hidden xl:block absolute top-1/2 left-1/3">
           <div className="w-3 h-3 bg-white bg-opacity-5 rounded-full animate-pulse delay-500"></div>
         </div>
       </div>
 
     {/* Right Panel - Auth Forms */}
-  <div className="w-full md:w-1/2 bg-gray-50 dark:bg-gray-950 p-6 sm:p-8 flex flex-col justify-center">
+  <div className="w-full md:w-1/2 bg-gray-50 dark:bg-gray-950 p-6 sm:p-8 lg:p-10 flex flex-col justify-center">
         {/* Mobile Hero (visible on small screens only) */}
   <div className="md:hidden bg-gradient-to-br from-medblue-600 to-medblue-800 text-white rounded-xl p-5 mb-6">
           <div className="flex items-center mb-3">
@@ -208,7 +208,7 @@ export default function AuthPage() {
             La nouvelle plateforme de questions destinée aux étudiants en médecine
           </p>
         </div>
-         <div className="max-w-md mx-auto w-full">
+         <div className="max-w-md lg:max-w-lg mx-auto w-full">
            {/* Home Link - exactly above form title */}
            <div className="mb-2 flex">
              <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-medblue-700 font-medium group">

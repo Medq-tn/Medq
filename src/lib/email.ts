@@ -2,12 +2,14 @@ import { Resend } from 'resend';
 import { VerificationEmail } from '@/components/email/VerificationEmail';
 import { ResetPasswordEmail } from '@/components/email/ResetPasswordEmail';
 import { VerificationCodeEmail } from '@/components/email/VerificationCodeEmail';
+import { getBaseUrl } from './utils';
 
 const apiKey = process.env.RESEND_API_KEY || 're_PxdyjGzd_FqbUgeRJmKUu5iytjmdr2qnB';
 const resend = new Resend(apiKey);
 
 export const sendVerificationEmail = async (email: string, token: string, name?: string) => {
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify?token=${token}`;
+  const base = getBaseUrl();
+  const verificationUrl = `${base}/auth/verify?token=${encodeURIComponent(token)}`;
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'MedQ <onboarding@resend.dev>';
   try {
     const result = await resend.emails.send({
@@ -24,7 +26,8 @@ export const sendVerificationEmail = async (email: string, token: string, name?:
 };
 
 export const sendPasswordResetEmail = async (email: string, token: string, name?: string) => {
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${token}`;
+  const base = getBaseUrl();
+  const resetUrl = `${base}/auth/reset-password?token=${encodeURIComponent(token)}`;
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'MedQ <onboarding@resend.dev>';
   try {
     const result = await resend.emails.send({
